@@ -3,13 +3,14 @@
 namespace App\Notification\Provider;
 
 use App\Enum\NotificationChannel;
+use App\Notification\HtmlCapableInterface;
 use App\Notification\NotificationProviderInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 
-readonly class AwsEmailProvider implements NotificationProviderInterface
+readonly class AwsEmailProvider implements NotificationProviderInterface, HtmlCapableInterface
 {
     /**
      * @param MailerInterface $mailer
@@ -35,8 +36,13 @@ readonly class AwsEmailProvider implements NotificationProviderInterface
             $email = new Email()
                 ->from($this->fromEmail)
                 ->to($content['email'])
-                ->subject($content['subject'] ?? 'Notification')
-                ->text($content['body'] ?? '');
+                ->subject($content['subject'] ?? 'Notification');
+
+            if (!empty($content['html'])) {
+                $email->html($content['html']);
+            }
+
+            $email->text($content['body'] ?? '');
 
             $this->mailer->send($email);
 

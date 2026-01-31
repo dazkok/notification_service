@@ -8,6 +8,7 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     enabled_channels: [ 'sms', 'email' ]
+    app.default_email_template: '%env(DEFAULT_EMAIL_TEMPLATE)%'
 
 services:
     # default configuration for services in *this* file
@@ -30,6 +31,7 @@ services:
     App\Service\NotificationService:
         arguments:
             $providers: !tagged_iterator app.notification_provider
+            $defaultTemplate: '%app.default_email_template%'
 
     App\Notification\Provider\AwsEmailProvider:
         arguments:
