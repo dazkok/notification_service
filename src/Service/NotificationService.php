@@ -7,6 +7,7 @@ use App\Notification\HtmlCapableInterface;
 use App\Notification\NotificationProviderInterface;
 use App\Notification\NotificationRenderer;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class NotificationService
 {
@@ -25,6 +26,7 @@ class NotificationService
     /**
      * @param NotificationRequestDto $dto
      * @return void
+     * @throws TransportExceptionInterface
      */
     public function process(NotificationRequestDto $dto): void
     {
@@ -37,6 +39,7 @@ class NotificationService
      * @param string $channel
      * @param array $content
      * @return void
+     * @throws TransportExceptionInterface
      */
     private function sendNotification(string $channel, array $content): void
     {
