@@ -17,6 +17,10 @@ readonly class NotificationRequestDto
         ])]
         public array  $channels,
 
+        #[Assert\Optional]
+        #[Assert\DateTime]
+        public ?\DateTimeImmutable $scheduledDate,
+
         #[Assert\Collection(
             fields: [
                 'subject' => new Assert\NotBlank(),
