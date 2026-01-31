@@ -31,4 +31,8 @@ services:
         arguments:
             $providers: !tagged_iterator app.notification_provider
 
+    App\Notification\Provider\AwsEmailProvider:
+        arguments:
+            $fromEmail: '%env(AWS_FROM_EMAIL)%'
+
     # please note that last definitions always *replace* previous ones
