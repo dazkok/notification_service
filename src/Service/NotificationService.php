@@ -10,14 +10,18 @@ class NotificationService
 {
     public function __construct(
         /**
-         * @var NotificationProviderInterface[]
+         * @var iterable<NotificationProviderInterface>
          */
-        private iterable        $providers,
-        private LoggerInterface $logger,
+        private readonly iterable        $providers,
+        private readonly LoggerInterface $logger,
     )
     {
     }
 
+    /**
+     * @param NotificationRequestDto $dto
+     * @return void
+     */
     public function process(NotificationRequestDto $dto): void
     {
         foreach ($dto->channels as $channel) {
@@ -25,27 +29,38 @@ class NotificationService
         }
     }
 
+    /**
+     * @param string $channel
+     * @param array $content
+     * @return void
+     */
     private function sendNotification(string $channel, array $content): void
     {
-        $sent = false;
+        $executed = false;
 
         foreach ($this->providers as $provider) {
             if (!$provider->supports($channel)) {
                 continue;
             }
 
+            $executed = true;
+
             try {
                 if ($provider->send($content)) {
-                    $sent = true;
-                    break;
+                    return;
                 }
             } catch (\Exception $e) {
-                $this->logger->error($e->getMessage());
+                $this->logger->error(sprintf(
+                    'Provider %s failed for channel %s: %s',
+                    get_class($provider), $channel, $e->getMessage()
+                ));
             }
         }
 
-        if (!$sent) {
-            throw new \RuntimeException('All providers failed to send notification. Channel: ' . $channel);
+        if (!$executed) {
+            throw new \RuntimeException('No providers registered for channel: ' . $channel);
         }
+
+        throw new \RuntimeException("All providers for channel '$channel' failed.");
     }
 }
