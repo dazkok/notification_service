@@ -15,10 +15,10 @@ class NotificationService
         /**
          * @var iterable<NotificationProviderInterface>
          */
-        private readonly iterable        $providers,
-        private readonly LoggerInterface $logger,
+        private readonly iterable             $providers,
+        private readonly LoggerInterface      $logger,
         private readonly NotificationRenderer $renderer,
-        private readonly string $defaultTemplate
+        private readonly string               $defaultTemplate
     )
     {
     }
@@ -31,7 +31,8 @@ class NotificationService
     public function process(NotificationRequestDto $dto): void
     {
         foreach ($dto->channels as $channel) {
-            $this->sendNotification($channel, $dto->content);
+            $preparedContent = $this->prepareContentForChannel($channel, $dto->content);
+            $this->sendNotification($channel, $preparedContent);
         }
     }
 
@@ -44,7 +45,6 @@ class NotificationService
     private function sendNotification(string $channel, array $content): void
     {
         $executed = false;
-        $htmlRendered = false;
 
         foreach ($this->providers as $provider) {
             if (!$provider->supports($channel)) {
@@ -52,17 +52,6 @@ class NotificationService
             }
 
             $executed = true;
-
-            if ($provider instanceof HtmlCapableInterface && !$htmlRendered) {
-                $template = $content['template'] ?? $this->defaultTemplate;
-
-                try {
-                    $content['html'] = $this->renderer->render($template, $content);
-                    $htmlRendered = true;
-                } catch (\Exception $e) {
-                    $this->logger->error('Template rendering failed: ' . $e->getMessage());
-                }
-            }
 
             try {
                 if ($provider->send($content)) {
@@ -81,5 +70,32 @@ class NotificationService
         }
 
         throw new \RuntimeException("All providers for channel '$channel' failed.");
+    }
+
+    /**
+     * @param string $channel
+     * @param array $content
+     * @return array
+     */
+    private function prepareContentForChannel(string $channel, array $content): array
+    {
+        $needsHtml = false;
+        foreach ($this->providers as $provider) {
+            if ($provider->supports($channel) && $provider instanceof HtmlCapableInterface) {
+                $needsHtml = true;
+                break;
+            }
+        }
+
+        if ($needsHtml) {
+            $template = $content['template'] ?? $this->defaultTemplate;
+            try {
+                $content['html'] = $this->renderer->render($template, $content);
+            } catch (\Exception $e) {
+                $this->logger->error('Template rendering failed: ' . $e->getMessage());
+            }
+        }
+
+        return $content;
     }
 }

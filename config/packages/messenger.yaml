@@ -15,7 +15,7 @@ framework:
             # sync: 'sync://'
 
         routing:
-            'App\Message\SendNotificationMessage': async
+            'App\Message\SendNotification': async
 
 # when@test:
 #    framework:
