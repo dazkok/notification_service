@@ -1,0 +1,6 @@
+framework:
+    rate_limiter:
+        notification_api:
+            policy: 'fixed_window'
+            limit: 300
+            interval: '60 minutes'
