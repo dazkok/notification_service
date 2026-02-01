@@ -8,8 +8,10 @@ use App\Notification\NotificationProviderInterface;
 use App\Notification\NotificationRenderer;
 use App\Service\NotificationService;
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use Psr\Log\LoggerInterface;
 
+#[AllowMockObjectsWithoutExpectations]
 class NotificationServiceTest extends TestCase
 {
     public function test_process_fails_over_to_second_provider(): void
@@ -19,17 +21,14 @@ class NotificationServiceTest extends TestCase
         $log->setRecipient('test@example.com');
         $log->setContent(['subject' => 'Hi', 'body' => 'Hello']);
 
-        // 1. Мокаємо провайдера, який ПАДАЄ
         $failProvider = $this->createMock(NotificationProviderInterface::class);
         $failProvider->method('supports')->willReturn(true);
-        $failProvider->method('send')->willReturn(false); // Імітуємо невдачу
+        $failProvider->method('send')->willReturn(false); // We simulate failure
 
-        // 2. Мокаємо провайдера, який ПРАЦЮЄ
         $successProvider = $this->createMock(NotificationProviderInterface::class);
         $successProvider->method('supports')->willReturn(true);
-        $successProvider->method('send')->willReturn(true); // Успіх
+        $successProvider->expects($this->once())->method('send')->willReturn(true);
 
-        // Створюємо сервіс з масивом провайдерів
         $service = new NotificationService(
             [$failProvider, $successProvider],
             $this->createMock(LoggerInterface::class),
@@ -37,13 +36,8 @@ class NotificationServiceTest extends TestCase
             'default_template'
         );
 
-        // 3. Запускаємо процес
         $service->process($log);
 
-        // Перевіряємо, що другий провайдер БУВ викликаний хоча б один раз
-        $successProvider->expects($this->once())->method('send');
-
-        // Якщо ми дійшли сюди без RuntimeException — failover спрацював
         $this->assertTrue(true);
     }
 }
