@@ -40,6 +40,7 @@ final readonly class SendNotificationHandler
         //in case of failure, the message will be retried (see config/packages/messenger.yaml)
         $this->notificationService->process($log);
 
+        $log->setSentAt(new \DateTimeImmutable());
         $log->setStatus(NotificationStatus::SENT);
         $this->entityManager->flush();
     }
