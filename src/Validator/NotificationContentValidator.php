@@ -9,11 +9,6 @@ use Symfony\Component\Validator\Constraint;
 
 class NotificationContentValidator extends ConstraintValidator
 {
-    private const CHANNEL_REQUIRED_FIELDS = [
-        NotificationChannel::EMAIL->value => 'email',
-        NotificationChannel::SMS->value => 'phone'
-    ];
-
     /**
      * @param mixed $value
      * @param Constraint $constraint
@@ -26,7 +21,13 @@ class NotificationContentValidator extends ConstraintValidator
         }
 
         foreach ($value->channels as $channel) {
-            $requiredField = self::CHANNEL_REQUIRED_FIELDS[$channel] ?? null;
+            $channelEnum = NotificationChannel::tryFrom($channel);
+
+            if (!$channelEnum) {
+                continue;
+            }
+
+            $requiredField = $channelEnum->getRequiredField();
 
             if ($requiredField && empty($value->content[$requiredField])) {
                 $this->context->buildViolation("Field '$requiredField' is required for channel $channel.")

@@ -68,6 +68,29 @@ services:
       # - ./docker/db/data:/var/lib/postgresql/data:rw
 ###< doctrine/doctrine-bundle ###
 
+  messenger-worker:
+    build:
+      context: .
+      target: frankenphp_dev
+    # Додаємо STABILITY, щоб entrypoint не панікував,
+    # хоча з volumes він взагалі не має туди заходити
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-15}&charset=${POSTGRES_CHARSET:-utf8}
+      MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
+      APP_ENV: dev
+      STABILITY: ${STABILITY:-stable}
+    # ОБОВ'ЯЗКОВО: додаємо volumes, щоб воркер бачив код
+    volumes:
+      - .:/app
+      - caddy_data:/data
+      - caddy_config:/config
+    command: >
+      sh -c "php bin/console messenger:consume async -vv"
+    depends_on:
+      - database
+      - redis
+    restart: always
+
 volumes:
   caddy_data:
   caddy_config:

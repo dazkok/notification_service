@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Dto\NotificationRequestDto;
 use App\Entity\NotificationLog;
+use App\Enum\NotificationChannel;
 use App\Message\SendNotification;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -54,7 +55,15 @@ readonly class NotificationQueueManager
         $log = new NotificationLog();
         $log->setUserId($dto->userId);
         $log->setType($channel);
-        $log->setRecipient($dto->content['email'] ?? ($dto->content['phone'] ?? $dto->userId));
+
+        $channelEnum = NotificationChannel::tryFrom($channel);
+        $requiredField = $channelEnum->getRequiredField();
+
+        $recipient = ($requiredField && isset($dto->content[$requiredField]))
+            ? $dto->content[$requiredField]
+            : $dto->userId;
+
+        $log->setRecipient($recipient);
         $log->setContent($dto->content);
         $log->setScheduledAt($dto->scheduledDate);
         return $log;
