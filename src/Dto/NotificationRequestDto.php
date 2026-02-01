@@ -2,9 +2,13 @@
 
 namespace App\Dto;
 
+use App\Validator\NotificationContent;
 use App\Enum\NotificationChannel;
+use Symfony\Component\Serializer\Attribute\Context;
+use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
 use Symfony\Component\Validator\Constraints as Assert;
 
+#[NotificationContent]
 readonly class NotificationRequestDto
 {
     public function __construct(
@@ -18,7 +22,7 @@ readonly class NotificationRequestDto
         public array  $channels,
 
         #[Assert\Optional]
-        #[Assert\DateTime]
+        #[Context([DateTimeNormalizer::FORMAT_KEY => 'Y-m-d H:i:s'])]
         public ?\DateTimeImmutable $scheduledDate,
 
         #[Assert\Collection(

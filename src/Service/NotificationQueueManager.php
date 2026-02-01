@@ -1,0 +1,73 @@
+<?php
+
+namespace App\Service;
+
+use App\Dto\NotificationRequestDto;
+use App\Entity\NotificationLog;
+use App\Message\SendNotification;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\DelayStamp;
+
+readonly class NotificationQueueManager
+{
+    /**
+     * @param EntityManagerInterface $entityManager
+     * @param MessageBusInterface $bus
+     */
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private MessageBusInterface    $bus,
+    )
+    {
+    }
+
+    /**
+     * @param NotificationRequestDto $dto
+     * @return void
+     */
+    public function enqueue(NotificationRequestDto $dto): void
+    {
+        $this->entityManager->wrapInTransaction(function () use ($dto) {
+            foreach ($dto->channels as $channel) {
+                $log = $this->createLog($dto, $channel);
+
+                $this->entityManager->persist($log);
+                $this->entityManager->flush();
+
+                $delay = $this->calculateDelay($dto->scheduledDate);
+                $this->bus->dispatch(
+                    new SendNotification($log->getId()),
+                    $delay > 0 ? [new DelayStamp($delay)] : []
+                );
+            }
+        });
+    }
+
+    /**
+     * @param NotificationRequestDto $dto
+     * @param string $channel
+     * @return NotificationLog
+     */
+    private function createLog(NotificationRequestDto $dto, string $channel): NotificationLog
+    {
+        $log = new NotificationLog();
+        $log->setUserId($dto->userId);
+        $log->setType($channel);
+        $log->setRecipient($dto->content['email'] ?? ($dto->content['phone'] ?? $dto->userId));
+        $log->setContent($dto->content);
+        $log->setScheduledAt($dto->scheduledDate);
+        return $log;
+    }
+
+    /**
+     * @param ?\DateTimeImmutable $scheduledDate
+     * @return int
+     */
+    private function calculateDelay(?\DateTimeImmutable $scheduledDate): int
+    {
+        if (!$scheduledDate) return 0;
+        $diff = $scheduledDate->getTimestamp() - time();
+        return $diff > 0 ? $diff * 1000 : 0;
+    }
+}

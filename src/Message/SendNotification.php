@@ -2,8 +2,6 @@
 
 namespace App\Message;
 
-use App\Dto\NotificationRequestDto;
-
 final class SendNotification
 {
     /*
@@ -11,8 +9,11 @@ final class SendNotification
      * to hold the data for this message class.
      */
 
+    /**
+     * @param int $notificationLogId
+     */
     public function __construct(
-        public NotificationRequestDto $dto,
+        public int $notificationLogId
     )
     {
     }

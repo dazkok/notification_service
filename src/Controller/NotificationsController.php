@@ -3,7 +3,7 @@
 namespace App\Controller;
 
 use App\Dto\NotificationRequestDto;
-use App\Service\NotificationService;
+use App\Service\NotificationQueueManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -14,15 +14,15 @@ final class NotificationsController extends AbstractController
     #[Route('/notifications', name: 'notifications_send', methods: 'POST')]
     public function send(
         #[MapRequestPayload] NotificationRequestDto $dto,
-        NotificationService                         $service
+        NotificationQueueManager                    $queueManager
     ): JsonResponse
     {
         try {
-            $service->process($dto);
+            $queueManager->enqueue($dto);
 
             return $this->json([
                 'status' => 'success',
-                'message' => 'Notification sent successfully',
+                'message' => 'Notifications are being processed',
             ]);
         } catch (\Exception $e) {
             return $this->json([

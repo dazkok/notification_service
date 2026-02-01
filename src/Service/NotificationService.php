@@ -2,7 +2,8 @@
 
 namespace App\Service;
 
-use App\Dto\NotificationRequestDto;
+use App\Entity\NotificationLog;
+use App\Enum\NotificationChannel;
 use App\Notification\HtmlCapableInterface;
 use App\Notification\NotificationProviderInterface;
 use App\Notification\NotificationRenderer;
@@ -11,6 +12,12 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class NotificationService
 {
+    /**
+     * @param iterable<NotificationProviderInterface> $providers
+     * @param LoggerInterface $logger
+     * @param NotificationRenderer $renderer
+     * @param string $defaultTemplate
+     */
     public function __construct(
         /**
          * @var iterable<NotificationProviderInterface>
@@ -24,16 +31,22 @@ class NotificationService
     }
 
     /**
-     * @param NotificationRequestDto $dto
+     * @param NotificationLog $log
      * @return void
      * @throws TransportExceptionInterface
      */
-    public function process(NotificationRequestDto $dto): void
+    public function process(NotificationLog $log): void
     {
-        foreach ($dto->channels as $channel) {
-            $preparedContent = $this->prepareContentForChannel($channel, $dto->content);
-            $this->sendNotification($channel, $preparedContent);
+        $channel = $log->getType();
+        $content = $log->getContent();
+
+        $preparedContent = $this->prepareContentForChannel($channel, $content);
+
+        if ($channel === NotificationChannel::EMAIL->value) {
+            $preparedContent['email'] = $log->getRecipient();
         }
+
+        $this->sendNotification($channel, $preparedContent);
     }
 
     /**
