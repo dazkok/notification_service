@@ -8,27 +8,21 @@ use App\Enum\NotificationChannel;
 use App\Enum\NotificationStatus;
 use App\Service\NotificationQueueManager;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Tools\SchemaTool;
-use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 
-class NotificationQueueManagerTest extends KernelTestCase
+class NotificationQueueManagerTest extends DatabaseTestCase
 {
     private EntityManagerInterface $entityManager;
     private NotificationQueueManager $manager;
 
     protected function setUp(): void
     {
-        self::bootKernel();
+        parent::setUp();
+        
         $container = self::getContainer();
 
         $this->entityManager = $container->get(EntityManagerInterface::class);
         $this->manager = $container->get(NotificationQueueManager::class);
-
-        $metadatas = $this->entityManager->getMetadataFactory()->getAllMetadata();
-        $schemaTool = new SchemaTool($this->entityManager);
-        $schemaTool->dropSchema($metadatas);
-        $schemaTool->createSchema($metadatas);
 
         // Reset rate limiter for test users to ensure clean state
         $limiterFactory = $container->get('limiter.notification_api');
@@ -115,14 +109,5 @@ class NotificationQueueManagerTest extends KernelTestCase
         $this->expectExceptionMessage("Limit reached for user $userId");
 
         $this->manager->enqueue($dto);
-    }
-
-    protected function tearDown(): void
-    {
-        parent::tearDown();
-
-        if ($this->entityManager->isOpen()) {
-            $this->entityManager->close();
-        }
     }
 }
