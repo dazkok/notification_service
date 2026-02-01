@@ -31,13 +31,33 @@ class NotificationLogRepository extends ServiceEntityRepository
     //        ;
     //    }
 
-    //    public function findOneBySomeField($value): ?NotificationLog
-    //    {
-    //        return $this->createQueryBuilder('n')
-    //            ->andWhere('n.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+    public function findFailedNotifications(): array
+    {
+        return $this->createQueryBuilder('n')
+            ->andWhere('n.status = :status')
+            ->setParameter('status', \App\Enum\NotificationStatus::FAILED)
+            ->orderBy('n.createdAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findPendingNotifications(): array
+    {
+        return $this->createQueryBuilder('n')
+            ->andWhere('n.status = :status')
+            ->setParameter('status', \App\Enum\NotificationStatus::PENDING)
+            ->orderBy('n.createdAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function countPendingNotifications(): int
+    {
+        return $this->createQueryBuilder('n')
+            ->select('COUNT(n.id)')
+            ->andWhere('n.status = :status')
+            ->setParameter('status', \App\Enum\NotificationStatus::PENDING)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
 }
