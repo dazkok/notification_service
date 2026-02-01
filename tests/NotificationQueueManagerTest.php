@@ -29,6 +29,11 @@ class NotificationQueueManagerTest extends KernelTestCase
         $schemaTool = new SchemaTool($this->entityManager);
         $schemaTool->dropSchema($metadatas);
         $schemaTool->createSchema($metadatas);
+
+        // Reset rate limiter for test users to ensure clean state
+        $limiterFactory = $container->get('limiter.notification_api');
+        $limiterFactory->create(1)->reset();  // For main test user
+        $limiterFactory->create(99)->reset(); // For throttling test user
     }
 
     public function test_enqueue_create_db_log_and_dispatch_message(): void
@@ -68,5 +73,56 @@ class NotificationQueueManagerTest extends KernelTestCase
         /** @var InMemoryTransport $transport */
         $transport = self::getContainer()->get('messenger.transport.async');
         $this->assertCount($count, $transport->getSent());
+    }
+
+    public function test_enqueue_with_scheduled_date_adds_delay_stamp(): void
+    {
+        $futureDate = new \DateTimeImmutable('+1 hour');
+        $dto = new NotificationRequestDto(1, ['email'], $futureDate, ['email' => 'test@test.com']);
+
+        $this->manager->enqueue($dto);
+
+        /** @var InMemoryTransport $transport */
+        $transport = self::getContainer()->get('messenger.transport.async');
+        $envelopes = $transport->getSent();
+
+        $stamp = $envelopes[0]->last(\Symfony\Component\Messenger\Stamp\DelayStamp::class);
+
+        $this->assertNotNull($stamp, 'DelayStamp should be present');
+        $this->assertGreaterThan(0, $stamp->getDelay());
+    }
+
+    public function test_enqueue_fails_when_throttling_limit_reached(): void
+    {
+        $userId = 99;
+
+        $limit = self::getContainer()->getParameter('notification_rate_limit');
+
+        $dto = new NotificationRequestDto(
+            userId: $userId,
+            channels: [NotificationChannel::EMAIL->value],
+            scheduledDate: null,
+            content: ['email' => 'test@test.com']
+        );
+
+        // Enqueue exactly the limit number of notifications - these should succeed
+        for ($i = 0; $i < $limit; $i++) {
+            $this->manager->enqueue($dto);
+        }
+
+        // The next one should fail due to throttling
+        $this->expectException(\App\Exception\ThrottlingException::class);
+        $this->expectExceptionMessage("Limit reached for user $userId");
+
+        $this->manager->enqueue($dto);
+    }
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+
+        if ($this->entityManager->isOpen()) {
+            $this->entityManager->close();
+        }
     }
 }

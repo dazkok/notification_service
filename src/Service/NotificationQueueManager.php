@@ -5,20 +5,24 @@ namespace App\Service;
 use App\Dto\NotificationRequestDto;
 use App\Entity\NotificationLog;
 use App\Enum\NotificationChannel;
+use App\Exception\ThrottlingException;
 use App\Message\SendNotification;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\DelayStamp;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 readonly class NotificationQueueManager
 {
     /**
      * @param EntityManagerInterface $entityManager
      * @param MessageBusInterface $bus
+     * @param RateLimiterFactory $notificationApiLimiter
      */
     public function __construct(
         private EntityManagerInterface $entityManager,
         private MessageBusInterface    $bus,
+        private RateLimiterFactory     $notificationApiLimiter,
     )
     {
     }
@@ -29,6 +33,11 @@ readonly class NotificationQueueManager
      */
     public function enqueue(NotificationRequestDto $dto): void
     {
+        $limiter = $this->notificationApiLimiter->create($dto->userId);
+        if (false === $limiter->consume()->isAccepted()) {
+            throw new ThrottlingException("Limit reached for user {$dto->userId}");
+        }
+
         $this->entityManager->wrapInTransaction(function () use ($dto) {
             foreach ($dto->channels as $channel) {
                 $log = $this->createLog($dto, $channel);

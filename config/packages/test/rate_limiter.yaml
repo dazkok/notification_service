@@ -1,5 +1,5 @@
 parameters:
-    notification_rate_limit: 300
+    notification_rate_limit: 30
 
 framework:
     rate_limiter:

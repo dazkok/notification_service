@@ -33,6 +33,10 @@ services:
             $providers: !tagged_iterator app.notification_provider
             $defaultTemplate: '%app.default_email_template%'
 
+    App\Service\NotificationQueueManager:
+        arguments:
+            $notificationApiLimiter: '@limiter.notification_api'
+
     App\Notification\Provider\AwsEmailProvider:
         arguments:
             $fromEmail: '%env(AWS_FROM_EMAIL)%'
