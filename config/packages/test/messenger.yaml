@@ -1,6 +1,16 @@
 framework:
     messenger:
         transports:
-            async: 'in-memory://'
+#            async: 'in-memory://'
+            async:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+
+                options:
+                    exchange:
+                        name: notification_exchange
+                        type: direct
+                    queues:
+                        message_queue:
+                            binding_keys: ["normal"]
         routing:
             'App\Message\SendNotification': async

@@ -40,5 +40,7 @@ services:
     App\Notification\Provider\AwsEmailProvider:
         arguments:
             $fromEmail: '%env(AWS_FROM_EMAIL)%'
+#    App\Notification\Provider\AwsEmailProvider:
+#        autoconfigure: false
 
     # please note that last definitions always *replace* previous ones

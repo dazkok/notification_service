@@ -30,6 +30,7 @@ RUN set -eux; \
 		opcache \
 		zip \
         redis \
+        amqp \
 	;
 
 # https://getcomposer.org/doc/03-cli.md#composer-allow-superuser
